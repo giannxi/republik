@@ -1,6 +1,6 @@
 const fetch = require("node-fetch");
 const _ = require("lodash");
-const inquirer = require("inquirer")
+const inquirer = require("inquirer");
 
 const listFollowing = async (token, id, startAt = "") => {
   try {
@@ -49,28 +49,30 @@ const follow = async (token, id) => {
 };
 
 const main = async () => {
-
   const input = await inquirer.prompt([
     {
-      type: 'input',
-      name: 'token',
-      message: "Input Bearer Token:"
+      type: "input",
+      name: "token",
+      message: "Input Bearer Token:",
     },
     {
-      type: 'input',
-      name: 'userId',
-      message: "Input Target ID:"
-    }
-  ])
-
+      type: "input",
+      name: "userId",
+      message: "Input Target ID:",
+    },
+  ]);
   const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-  console.log(`Collecting id from target follower...`);
+  console.log(`Grabbing following...`);
 
-  const listUser = [];
+  let i = 0;
   let lastKey = "";
 
   do {
-    const getFollowing = await listFollowing(input.token, input.userId, lastKey);
+    const getFollowing = await listFollowing(
+      input.token,
+      input.userId,
+      lastKey
+    );
     if (!getFollowing.users) return console.log(getFollowing);
     if (getFollowing.users.length === 0) {
       break;
@@ -81,27 +83,19 @@ const main = async () => {
       break;
     }
 
-    getFollowing.users.map((user) => {
-      if (user.followStatus != "NONE") return;
-      listUser.push(user);
-    });
-  } while (lastKey !== "");
-
-  console.log(`Total : ${listUser.length}`);
-  console.log(`Execution...`);
-
-  const following = _.chunk(listUser, 10);
-  for (let i = 0; i < following.length; i++) {
     await Promise.all(
-      following[i].map(async (user) => {
+      getFollowing.users.map(async (user) => {
+        if (user.followStatus != "NONE") return;
         const doFollow = await follow(input.token, user.id);
         if (doFollow.followStatus) {
           console.log(
-            `[${user.id}] ${user.displayName} (@${user.username}) | Status : ${doFollow.followStatus}`
+            `[${i++}] [${user.id}] ${user.displayName} (@${
+              user.username
+            }) | Status : ${doFollow.followStatus}`
           );
         } else {
           console.log(
-            `[${user.id}] ${user.displayName} (@${
+            `[${i++}] [${user.id}] ${user.displayName} (@${
               user.username
             }) | Status : ${JSON.stringify(doFollow)}`
           );
@@ -109,7 +103,7 @@ const main = async () => {
       })
     );
     await delay(1500);
-  }
+  } while (lastKey !== "");
 };
 
 main();
